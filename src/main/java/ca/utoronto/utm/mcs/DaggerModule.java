@@ -23,7 +23,7 @@ public class DaggerModule {
 	private static MongoClient db;
 	
     @Provides public MongoClient provideMongoClient() {
-    	db = MongoClients.create("csc301a2");
+    	db = MongoClients.create();
     	//db=mongoClient.getDB("csc301a2");
     	return db;
     }
