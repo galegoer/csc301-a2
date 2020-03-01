@@ -17,6 +17,7 @@ import com.mongodb.client.ClientSession;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.session.ServerSession;
 import com.sun.net.httpserver.HttpExchange;
@@ -52,9 +53,11 @@ public class Post implements HttpHandler, AutoCloseable
             } else if (r.getRequestMethod().equals("DELETE")) {
             	//handleDelete(r);
             }
+            else
+            	r.sendResponseHeaders(405, -1);
         } catch (Exception e) {
         	//Method not allowed
-        	r.sendResponseHeaders(405, -1);
+        	r.sendResponseHeaders(500, -1);
         	return;
         }
     }
@@ -121,22 +124,27 @@ public void handleGet(HttpExchange r) throws IOException, JSONException {
         String id = memory.getValue();
         String title = memory.getValue();
         String contents = "["; //start of response
-        Document d = null;
         
+   
         //id only, or id takes priority --------------------------------------------------------------------------------------------
         if (deserialized.has("_id")) {
             id = deserialized.getString("_id");
             
             //query for _id = id
             BasicDBObject whereQuery = new BasicDBObject();
-            whereQuery.put("_id", id);
+            whereQuery.put("_id", new ObjectId(id));
             FindIterable<Document> cursor = posts.find(whereQuery);
-            if (cursor.first() == null)
+          
+            if (cursor.first() == null && deserialized.has("title")) //has both but id is incorrect RETURN 400 according to ilir 
+            	r.sendResponseHeaders(400,-1);
+            else if (cursor.first() == null) //otherwise
             	r.sendResponseHeaders(404,-1);
-            d = cursor.first();
+            Document d = cursor.first();
+            
+            System.out.println(d.get("_id"));
             if (!ObjectId.isValid(id))
             	r.sendResponseHeaders(400, -1);
-            contents += this.generate_response(d, id);
+            contents += this.generate_response(d);
         }
         //title only ----------------------------------------------------------------------------------------------------------------
         else if (deserialized.has("title")) {
@@ -145,87 +153,34 @@ public void handleGet(HttpExchange r) throws IOException, JSONException {
         	//query for all titles that contain string "title"
             BasicDBObject regexQuery = new BasicDBObject();
             regexQuery.put("title", 
-                new BasicDBObject("$regex", title)
-                .append("$options", "i"));
+                new BasicDBObject("$regex", title));
             FindIterable<Document> cursor = posts.find(regexQuery);
+            if (cursor.first() == null) //no post(s) found
+            	r.sendResponseHeaders(404,-1);
             
-            Iterator T = cursor.iterator();
+            Iterator<Document> T = cursor.iterator();
             while (T.hasNext()) {
-                contents += this.generate_response((Document) T.next(), d.getString("_id"));
-                if (!ObjectId.isValid(d.getString("_id")))
+            	Document D = T.next();
+            	String temp_Id = D.getObjectId("_id").toString();
+            	if (!ObjectId.isValid(temp_Id))
                 	r.sendResponseHeaders(400, -1);
-                
-                contents += ","; //if there are multiple documents we need a "," after the ending }
-                //might need to check if last doc then dont put "," ---
+            	
+            	contents += this.generate_response(D);
+            	if (T.hasNext()) //if NOT last doc then add comma
+            		contents += ",";
             }
-        }
+      }
         //error ---------------------------------------------------------------------------------------------------------------------
         else {  //no id or title found
         	r.sendResponseHeaders(400, -1);
         	return;
-        }
-        
-     
-//        contents += ("\n\t{\n\t\t\"_id\": {\n\t\t\t\"$oid\": " +	//part of generate response
-//				"\"" + id + "\"" + "\n\t\t},");
-//        
-//        Set <String> keys = d.keySet(); //set of keys
-//        int count = keys.size(); //# of keys
-//        int temp = 0; //keeping track of num keys written to contents so far
-//        for (String k: keys) {
-//        	temp++;
-//        	if (k.equals("title"))
-//        		contents += ("\n\t\t\"title\": \"" + d.getString("title")); //"title": "My First Post",
-//        
-//        	else if (k.equals("author"))
-//        		contents += ("\n\t\t\"author\": \"" + d.getString("author")); //"author": "My First Post",
-//        
-//        	else if (k.equals("content"))
-//        		contents += ("\n\t\t\"content\": \"" + d.getString("title")); //"content": "My First Post",
-//        
-//        	else if (k.equals("tags")) {
-//        		contents += ("\n\t\t\"tags\": ["); //"tags": [
-//        		List <String> tg = (List <String> )d.get("tags");
-//        		for (int i = 0; i < tg.size(); i++) {
-//        			contents += ("\n\t\t\t\"" + tg.get(i) + "\"");
-//        			if (i != tg.size()-1) //if not last tag
-//        				contents += ",";
-//        		}
-//        		contents += "\n\t\t]";
-//        	}
-//        	
-//        	if (temp != count && !k.equals("tags")) //if not last key and key just read isnt tags, add comma
-//            	contents+=  "\",";
-//        }
-//        contents += "\n\t}"; //part of generate_response
+        }     
         
         contents += "\n]"; //end of response
+
+        System.out.println(contents);
         
-//        if (d.containsKey("title"))
-//        	contents += ("\n\t\t\"title\": \"" + d.getString("title") + "\","); //"title": "My First Post",
-//        
-//        if (d.containsKey("author"))
-//        	contents += ("\n\t\t\"author\": \"" + d.getString("author") + "\","); //"title": "My First Post",
-//        
-//        if (d.containsKey("content"))
-//        	contents += ("\n\t\t\"content\": \"" + d.getString("title") + "\","); //"title": "My First Post",
-//        
-//        if (d.containsKey("tags")) {
-//        	contents += ("\n\t\t\"tags\": ["); //"title": "My First Post",
-//        	List <String> tg = (List <String> )d.get("tags");
-//        	for (int i = 0; i < tg.size(); i++) {
-//        		contents += ("\n\t\t\t\"" + tg.get(i) + "\"");
-//        		if (i != tg.size()-1) //if not last tag
-//        			contents += ",";
-//        	}
-//        	contents += "\n\t\t]";
-//        }
- //String response = "[\n\t{\n\t\t\"_id\": {\n\t\t\t\"$oid\": " +
-        //						"\"" + id + "\"" + "\n\t\t}," + contents;
-        		
-        
-        
-        r.sendResponseHeaders(200, 5); //response.length());
+        r.sendResponseHeaders(200, contents.length()); //response.length());
         OutputStream os = r.getResponseBody();
         os.write(contents.getBytes());		//response.getBytes());
         os.close();
@@ -234,9 +189,9 @@ public void handleGet(HttpExchange r) throws IOException, JSONException {
 
 }
 
-public String generate_response(Document d, String id) {
+public String generate_response(Document d) {
 	String contents = ("\n\t{\n\t\t\"_id\": {\n\t\t\t\"$oid\": " +
-			"\"" + id + "\"" + "\n\t\t},");
+			"\"" + d.getObjectId("_id") + "\"" + "\n\t\t}");
     
     Set <String> keys = d.keySet(); //set of keys
     int count = keys.size(); //# of keys
@@ -244,13 +199,13 @@ public String generate_response(Document d, String id) {
     for (String k: keys) {
     	temp++;
     	if (k.equals("title"))
-    		contents += ("\n\t\t\"title\": \"" + d.getString("title")); //"title": "My First Post",
+    		contents += ("\n\t\t\"title\": \"" + d.getString("title")) + "\""; //"title": "My First Post",
     
     	else if (k.equals("author"))
-    		contents += ("\n\t\t\"author\": \"" + d.getString("author")); //"author": "My First Post",
+    		contents += ("\n\t\t\"author\": \"" + d.getString("author")) + "\"" ; //"author": "My First Post",
     
     	else if (k.equals("content"))
-    		contents += ("\n\t\t\"content\": \"" + d.getString("title")); //"content": "My First Post",
+    		contents += ("\n\t\t\"content\": \"" + d.getString("content")) + "\""; //"content": "My First Post",
     
     	else if (k.equals("tags")) {
     		contents += ("\n\t\t\"tags\": ["); //"tags": [
@@ -264,7 +219,7 @@ public String generate_response(Document d, String id) {
     	}
     	
     	if (temp != count && !k.equals("tags")) //if not last key and key just read isnt tags, add comma
-        	contents+=  "\",";
+        	contents+=  ",";
     }
     contents += "\n\t}";
 	return contents;
