@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.json.*;
 
+import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.session.ServerSession;
 import com.sun.net.httpserver.HttpExchange;
@@ -13,12 +14,14 @@ import com.sun.net.httpserver.HttpHandler;
 
 
 
-public class Put implements HttpHandler, AutoCloseable
+public class Post implements HttpHandler, AutoCloseable
 {
     private static Memory memory;
+    private static MongoClient db;
     
-    public Put(Memory mem) {
+    public Post(Memory mem, MongoClient d) {
         memory = mem;
+        db = d;
     }
     
     @Override
