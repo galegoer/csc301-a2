@@ -9,3 +9,4 @@ public interface DaggerComponent {
 
 	public Dagger buildMongoHttp();
 }
+

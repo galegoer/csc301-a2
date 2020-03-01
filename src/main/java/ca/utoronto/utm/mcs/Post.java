@@ -45,6 +45,7 @@ public class Post implements HttpHandler, AutoCloseable
     }
 
     public void handle(HttpExchange r) throws IOException {
+    	try {
             if (r.getRequestMethod().equals("GET")) {
                 handleGet(r);
             } else if (r.getRequestMethod().equals("PUT")) {
@@ -52,10 +53,16 @@ public class Post implements HttpHandler, AutoCloseable
             } else if (r.getRequestMethod().equals("DELETE")) {
             	handleDelete(r);
             }
-            else {
-            	r.sendResponseHeaders(405, -1);
+            else
+            	throw new Exception();
+    	}
+    	catch (Exception e) {
+    		r.sendResponseHeaders(405, -1);
+    		return;
+    	}
+            //else {
+            //	r.sendResponseHeaders(405, -1);
 		return;
-	    }
     }
     
  public void handlePut(HttpExchange r) throws IOException, JSONException {
@@ -120,6 +127,7 @@ public class Post implements HttpHandler, AutoCloseable
 
 }
 public void handleGet(HttpExchange r) throws IOException, JSONException {
+		try {
         String body = Utils.convert(r.getRequestBody());
         JSONObject deserialized;
 	 	try {
@@ -130,8 +138,8 @@ public void handleGet(HttpExchange r) throws IOException, JSONException {
 	 		return;
 	 	}
 	 	
-        String id = memory.getValue();
-        String title = memory.getValue();
+        String id;
+        String title;
         String contents = "["; //start of response
         
    
@@ -189,11 +197,18 @@ public void handleGet(HttpExchange r) throws IOException, JSONException {
 
         System.out.println(contents);
         
+//        JSONObject test = new JSONObject();
+//        test.put("title", "abc");
+//        test.put("author", "123");
+//        test.put("content", "321");
+//        test.put("tags", "lul");
+//        
         r.sendResponseHeaders(200, contents.length()); //response.length());
         OutputStream os = r.getResponseBody();
         os.write(contents.getBytes());		//response.getBytes());
         os.close();
         return;
+        
 	 } catch (Exception e) {
 		 //IF IT ever errors out i guess 500 takes priority
 		 r.sendResponseHeaders(500, -1);
@@ -202,7 +217,6 @@ public void handleGet(HttpExchange r) throws IOException, JSONException {
 
 }
 
-}
 
 public String generate_response(Document d) {
 	String contents = ("\n\t{\n\t\t\"_id\": {\n\t\t\t\"$oid\": " +
