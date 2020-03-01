@@ -6,7 +6,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoDatabase;
 import com.sun.net.httpserver.HttpServer;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -20,25 +19,21 @@ public class App
 
     public static void main(String[] args) throws IOException
     {
-    	Dagger service = DaggerDaggerComponent.create().buildMongoHttp();
-    		
-    	//Create your server context here
-    	HttpServer server = service.getServer();
-    	MongoClient db = service.getDb();
-    	//db.startSession() --put in post.java
-    	//MongoDatabase database = db.getDatabase("csc301a2"); --do in post.java
-    	Memory mem = new Memory();
+        Dagger service = DaggerDaggerComponent.create().buildMongoHttp();
+        Memory mem = new Memory();
+        //Create your server context here
+        HttpServer server = service.getServer();
+        MongoClient db = service.getDb();
+        MongoDatabase database = db.getDatabase("csc301a2");
+        if(database.getCollection("posts") == null)
+            database.createCollection("posts");
+        server.createContext("/api/v1/post", new Post(mem, db));
 
-    	MongoDatabase database = db.getDatabase("csc301a2");
-    	if(database.getCollection("posts") == null)
-    		database.createCollection("posts");
-    	server.createContext("/api/v1/post", new Post(mem, db));
-	    
-    	//Dagger daggerPost = service.createContext("/api/v1/post", )
-    	//
-	    
-    	service.getServer().start();
-    	
-    	System.out.printf("Server started on port %d", port);
+        //Dagger daggerPost = service.createContext("/api/v1/post", )
+        //
+
+        service.getServer().start();
+
+        System.out.printf("Server started on port %d", port);
     }
 }
