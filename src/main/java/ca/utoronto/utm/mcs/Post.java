@@ -2,18 +2,23 @@ package ca.utoronto.utm.mcs;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Iterator;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.*;
 
 import com.mongodb.client.MongoClient;
+import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 import com.mongodb.client.ClientSession;
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.session.ServerSession;
@@ -48,9 +53,11 @@ public class Post implements HttpHandler, AutoCloseable
             } else if (r.getRequestMethod().equals("DELETE")) {
             	handleDelete(r);
             }
+            else
+            	r.sendResponseHeaders(405, -1);
         } catch (Exception e) {
         	//Method not allowed
-        	r.sendResponseHeaders(405, -1);
+        	r.sendResponseHeaders(500, -1);
         	return;
         }
     }
@@ -113,7 +120,83 @@ public class Post implements HttpHandler, AutoCloseable
         os.write(response.getBytes());
         os.close();
         return;
+
+}
+public void handleGet(HttpExchange r) throws IOException, JSONException {
+        String body = Utils.convert(r.getRequestBody());
+        JSONObject deserialized;
+	 	try {
+	 		deserialized = new JSONObject(body);
+	 	} catch (Exception e) {
+	 		//Error parsing the JSON Message
+	 		r.sendResponseHeaders(400, -1);
+	 		return;
+	 	}
+	 	
+        String id = memory.getValue();
+        String title = memory.getValue();
+        String contents = "["; //start of response
         
+   
+        //id only, or id takes priority --------------------------------------------------------------------------------------------
+        if (deserialized.has("_id")) {
+            id = deserialized.getString("_id");
+            
+            //query for _id = id
+            BasicDBObject whereQuery = new BasicDBObject();
+            whereQuery.put("_id", new ObjectId(id));
+            FindIterable<Document> cursor = posts.find(whereQuery);
+          
+            if (cursor.first() == null && deserialized.has("title")) //has both but id is incorrect RETURN 400 according to ilir 
+            	r.sendResponseHeaders(400,-1);
+            else if (cursor.first() == null) //otherwise
+            	r.sendResponseHeaders(404,-1);
+            Document d = cursor.first();
+            
+            System.out.println(d.get("_id"));
+            if (!ObjectId.isValid(id))
+            	r.sendResponseHeaders(400, -1);
+            contents += this.generate_response(d);
+        }
+        //title only ----------------------------------------------------------------------------------------------------------------
+        else if (deserialized.has("title")) {
+        	title = deserialized.getString("title");
+        	
+        	//query for all titles that contain string "title"
+            BasicDBObject regexQuery = new BasicDBObject();
+            regexQuery.put("title", 
+                new BasicDBObject("$regex", title));
+            FindIterable<Document> cursor = posts.find(regexQuery);
+            if (cursor.first() == null) //no post(s) found
+            	r.sendResponseHeaders(404,-1);
+            
+            Iterator<Document> T = cursor.iterator();
+            while (T.hasNext()) {
+            	Document D = T.next();
+            	String temp_Id = D.getObjectId("_id").toString();
+            	if (!ObjectId.isValid(temp_Id))
+                	r.sendResponseHeaders(400, -1);
+            	
+            	contents += this.generate_response(D);
+            	if (T.hasNext()) //if NOT last doc then add comma
+            		contents += ",";
+            }
+      }
+        //error ---------------------------------------------------------------------------------------------------------------------
+        else {  //no id or title found
+        	r.sendResponseHeaders(400, -1);
+        	return;
+        }     
+        
+        contents += "\n]"; //end of response
+
+        System.out.println(contents);
+        
+        r.sendResponseHeaders(200, contents.length()); //response.length());
+        OutputStream os = r.getResponseBody();
+        os.write(contents.getBytes());		//response.getBytes());
+        os.close();
+        return;
 	 } catch (Exception e) {
 		 //IF IT ever errors out i guess 500 takes priority
 		 r.sendResponseHeaders(500, -1);
@@ -122,45 +205,45 @@ public class Post implements HttpHandler, AutoCloseable
 
 }
 
-//public void handleGet(HttpExchange r) throws IOException, JSONException {
-//        String body = Utils.convert(r.getRequestBody());
-//        JSONObject deserialized;
-//	 	try {
-//	 		deserialized = new JSONObject(body);
-//	 	} catch (Exception e) {
-//	 		//Error parsing the JSON Message
-//	 		r.sendResponseHeaders(400, -1);
-//	 		return;
-//	 	}
-//	 	
-//        String title = memory.getValue();
-//        String author = memory.getValue();
-//        String content = memory.getValue();
-//        String tags = memory.getValue();
-//        
-//        if (deserialized.has("title") && deserialized.has("author") 
-//        		&& deserialized.has("content") && deserialized.has("tags")) {
-//        	
-//            title = deserialized.getString("title");
-//            author = deserialized.getString("author");
-//            content = deserialized.getString("content");
-//            tags = deserialized.getString("tags");
-//        }
-//        else {
-//        	r.sendResponseHeaders(400, -1);
-//        	return;
-//        }
-//        //Good so send result to mongodb
-//       
-//        		
-//        r.sendResponseHeaders(200, 5); //response.length());
-//        OutputStream os = r.getResponseBody();
-//        os.write("test".getBytes());		//response.getBytes());
-//        os.close();
-//        return;
-//
-//
-//}
+}
+
+public String generate_response(Document d) {
+	String contents = ("\n\t{\n\t\t\"_id\": {\n\t\t\t\"$oid\": " +
+			"\"" + d.getObjectId("_id") + "\"" + "\n\t\t}");
+    
+    Set <String> keys = d.keySet(); //set of keys
+    int count = keys.size(); //# of keys
+    int temp = 0; //keeping track of num keys written to contents so far
+    for (String k: keys) {
+    	temp++;
+    	if (k.equals("title"))
+    		contents += ("\n\t\t\"title\": \"" + d.getString("title")) + "\""; //"title": "My First Post",
+    
+    	else if (k.equals("author"))
+    		contents += ("\n\t\t\"author\": \"" + d.getString("author")) + "\"" ; //"author": "My First Post",
+    
+    	else if (k.equals("content"))
+    		contents += ("\n\t\t\"content\": \"" + d.getString("content")) + "\""; //"content": "My First Post",
+    
+    	else if (k.equals("tags")) {
+    		contents += ("\n\t\t\"tags\": ["); //"tags": [
+    		List <String> tg = (List <String> )d.get("tags");
+    		for (int i = 0; i < tg.size(); i++) {
+    			contents += ("\n\t\t\t\"" + tg.get(i) + "\"");
+    			if (i != tg.size()-1) //if not last tag
+    				contents += ",";
+    		}
+    		contents += "\n\t\t]";
+    	}
+    	
+    	if (temp != count && !k.equals("tags")) //if not last key and key just read isnt tags, add comma
+        	contents+=  ",";
+    }
+    contents += "\n\t}";
+	return contents;
+}
+
+
 
 public void handleDelete(HttpExchange r) throws IOException, JSONException {
 	try {

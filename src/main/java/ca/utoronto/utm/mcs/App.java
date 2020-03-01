@@ -6,7 +6,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoDatabase;
 import com.sun.net.httpserver.HttpServer;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -20,6 +19,7 @@ public class App
 
     public static void main(String[] args) throws IOException
     {
+
     	Dagger service = DaggerDaggerComponent.create().buildMongoHttp();
     		
     	//Create your server context here
@@ -39,5 +39,6 @@ public class App
     	service.getServer().start();
     	
     	System.out.printf("Server started on port %d", port);
+
     }
 }
