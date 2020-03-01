@@ -27,12 +27,11 @@ public class App
     	MongoClient db = service.getDb();
     	//db.startSession() --put in post.java
     	//MongoDatabase database = db.getDatabase("csc301a2"); --do in post.java
-    	Memory mem = new Memory();
 
     	MongoDatabase database = db.getDatabase("csc301a2");
     	if(database.getCollection("posts") == null)
     		database.createCollection("posts");
-    	server.createContext("/api/v1/post", new Post(mem, db));
+    	server.createContext("/api/v1/post", new Post(db));
 	    
     	//Dagger daggerPost = service.createContext("/api/v1/post", )
     	//

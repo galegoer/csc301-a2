@@ -22,13 +22,11 @@ import com.sun.net.httpserver.HttpHandler;
 
 public class Post implements HttpHandler, AutoCloseable 
 {
-    private static Memory memory;
     private static MongoClient database;
     private static MongoDatabase csdb;
     private static MongoCollection<Document> posts;
     
-    public Post(Memory mem, MongoClient db) {
-        memory = mem;
+    public Post(MongoClient db) {
         database = db;
         csdb = database.getDatabase("csc301a2");
         posts = csdb.getCollection("posts");
@@ -43,9 +41,9 @@ public class Post implements HttpHandler, AutoCloseable
     public void handle(HttpExchange r) throws IOException {
         try {
             if (r.getRequestMethod().equals("GET")) {
-                handleGet(r);
+                //handleGet(r);
             } else if (r.getRequestMethod().equals("PUT")) {
-            	handlePut(r);
+            	//handlePut(r);
             } else if (r.getRequestMethod().equals("DELETE")) {
             	handleDelete(r);
             }
@@ -56,123 +54,127 @@ public class Post implements HttpHandler, AutoCloseable
         }
     }
 
- public void handlePut(HttpExchange r) throws IOException, JSONException {
-	 	String body = Utils.convert(r.getRequestBody());
-	 	JSONObject deserialized;
-	 	try {
-	 		deserialized = new JSONObject(body);
-	 	} catch (Exception e) {
-	 		//Error parsing the JSON Message
-	 		r.sendResponseHeaders(400, -1);
-	 		return;
-	 	}
-	 	
-	 	String title = memory.getValue();
-        String author = memory.getValue();
-        String content = memory.getValue();
-        String tags = memory.getValue();
-        
-        if (deserialized.has("title") && deserialized.has("author") 
-        		&& deserialized.has("content") && deserialized.has("tags")) {
-            title = deserialized.getString("title");
-            author = deserialized.getString("author");
-            content = deserialized.getString("content");
-            tags = deserialized.getString("tags");
-        } else {
-        	//missing
-        	r.sendResponseHeaders(400, -1);
-        	return;
-        }
-		// Good so connect to mongo and post
-        //try (ClientSession session = database.startSession())
-        //{	
-        	//session.startTransaction();
-        	Document doc = Document.parse(deserialized.toString());
-        	posts.insertOne(doc);
-        	ObjectId id = doc.getObjectId("_id");
-      	//} catch(Exception e) {
-      	//	e.printStackTrace();
-      	//	r.sendResponseHeaders(500, -1);
-      	//	return;
-      	//}
-        //Went through send response
-        String response = "{\n\t\"_id\": \"" + id.toString() + "\"\n}";
-        r.sendResponseHeaders(200, response.length());
-        OutputStream os = r.getResponseBody();
-        os.write(response.getBytes());
-        os.close();
-        return;
-
-}
-
-public void handleGet(HttpExchange r) throws IOException, JSONException {
-        String body = Utils.convert(r.getRequestBody());
-        JSONObject deserialized;
-	 	try {
-	 		deserialized = new JSONObject(body);
-	 	} catch (Exception e) {
-	 		//Error parsing the JSON Message
-	 		r.sendResponseHeaders(400, -1);
-	 		return;
-	 	}
-	 	
-        String title = memory.getValue();
-        String author = memory.getValue();
-        String content = memory.getValue();
-        String tags = memory.getValue();
-        
-        if (deserialized.has("title") && deserialized.has("author") 
-        		&& deserialized.has("content") && deserialized.has("tags")) {
-        	
-            title = deserialized.getString("title");
-            author = deserialized.getString("author");
-            content = deserialized.getString("content");
-            tags = deserialized.getString("tags");
-        }
-        else {
-        	r.sendResponseHeaders(400, -1);
-        	return;
-        }
-        //Good so send result to mongodb
-       
-        		
-        r.sendResponseHeaders(200, 5); //response.length());
-        OutputStream os = r.getResponseBody();
-        os.write("test".getBytes());		//response.getBytes());
-        os.close();
-        return;
-
-
-}
+// public void handlePut(HttpExchange r) throws IOException, JSONException {
+//	 	String body = Utils.convert(r.getRequestBody());
+//	 	JSONObject deserialized;
+//	 	try {
+//	 		deserialized = new JSONObject(body);
+//	 	} catch (Exception e) {
+//	 		//Error parsing the JSON Message
+//	 		r.sendResponseHeaders(400, -1);
+//	 		return;
+//	 	}
+//	 	
+//	 	String title = memory.getValue();
+//        String author = memory.getValue();
+//        String content = memory.getValue();
+//        String tags = memory.getValue();
+//        
+//        if (deserialized.has("title") && deserialized.has("author") 
+//        		&& deserialized.has("content") && deserialized.has("tags")) {
+//            title = deserialized.getString("title");
+//            author = deserialized.getString("author");
+//            content = deserialized.getString("content");
+//            tags = deserialized.getString("tags");
+//        } else {
+//        	//missing
+//        	r.sendResponseHeaders(400, -1);
+//        	return;
+//        }
+//		// Good so connect to mongo and post
+//        //try (ClientSession session = database.startSession())
+//        //{	
+//        	//session.startTransaction();
+//        	Document doc = Document.parse(deserialized.toString());
+//        	posts.insertOne(doc);
+//        	ObjectId id = doc.getObjectId("_id");
+//      	//} catch(Exception e) {
+//      	//	e.printStackTrace();
+//      	//	r.sendResponseHeaders(500, -1);
+//      	//	return;
+//      	//}
+//        //Went through send response
+//        String response = "{\n\t\"_id\": \"" + id.toString() + "\"\n}";
+//        r.sendResponseHeaders(200, response.length());
+//        OutputStream os = r.getResponseBody();
+//        os.write(response.getBytes());
+//        os.close();
+//        return;
+//
+//}
+//
+//public void handleGet(HttpExchange r) throws IOException, JSONException {
+//        String body = Utils.convert(r.getRequestBody());
+//        JSONObject deserialized;
+//	 	try {
+//	 		deserialized = new JSONObject(body);
+//	 	} catch (Exception e) {
+//	 		//Error parsing the JSON Message
+//	 		r.sendResponseHeaders(400, -1);
+//	 		return;
+//	 	}
+//	 	
+//        String title = memory.getValue();
+//        String author = memory.getValue();
+//        String content = memory.getValue();
+//        String tags = memory.getValue();
+//        
+//        if (deserialized.has("title") && deserialized.has("author") 
+//        		&& deserialized.has("content") && deserialized.has("tags")) {
+//        	
+//            title = deserialized.getString("title");
+//            author = deserialized.getString("author");
+//            content = deserialized.getString("content");
+//            tags = deserialized.getString("tags");
+//        }
+//        else {
+//        	r.sendResponseHeaders(400, -1);
+//        	return;
+//        }
+//        //Good so send result to mongodb
+//       
+//        		
+//        r.sendResponseHeaders(200, 5); //response.length());
+//        OutputStream os = r.getResponseBody();
+//        os.write("test".getBytes());		//response.getBytes());
+//        os.close();
+//        return;
+//
+//
+//}
 
 public void handleDelete(HttpExchange r) throws IOException, JSONException {
-    String body = Utils.convert(r.getRequestBody());
-    JSONObject deserialized;
- 	try {
- 		deserialized = new JSONObject(body);
- 	} catch (Exception e) {
- 		//Error parsing the JSON Message
- 		r.sendResponseHeaders(400, -1);
- 		return;
- 	}
- 	
-    String Id = memory.getValue();
+	try {
+		String body = Utils.convert(r.getRequestBody());
+		JSONObject deserialized;
+		try {
+			deserialized = new JSONObject(body);
+		} catch (Exception e) {
+			//Error parsing the JSON Message
+			r.sendResponseHeaders(400, -1);
+			return;
+		}
 
-    if (deserialized.has("_id"))
-        Id = deserialized.getString("_id");
-    else {
-    	r.sendResponseHeaders(400, -1);
-    	return;
-    }
-    Document doc = Document.parse("{\"_id\": ObjectId(\"" + Id + "\")}");
-    DeleteResult res = posts.deleteOne(doc);
-    if(res.getDeletedCount() == 0) {
-    	r.sendResponseHeaders(404, -1);
-    	return;
-    }
-    r.sendResponseHeaders(200, -1);
-    return;
+		String Id;
 
-
+		if (deserialized.has("_id"))
+			Id = deserialized.getString("_id");
+		else {
+			r.sendResponseHeaders(400, -1);
+			return;
+		}
+		Document doc = Document.parse("{\"_id\": ObjectId(\"" + Id + "\")}");
+		DeleteResult res = posts.deleteOne(doc);
+		if(res.getDeletedCount() == 0) {
+			r.sendResponseHeaders(404, -1);
+			return;
+		}
+		r.sendResponseHeaders(200, -1);
+		return;
+		
+	} catch (Exception e) {
+		r.sendResponseHeaders(500, -1);
+		return;
+	}
 }
 }
