@@ -45,21 +45,17 @@ public class Post implements HttpHandler, AutoCloseable
     }
 
     public void handle(HttpExchange r) throws IOException {
-        try {
             if (r.getRequestMethod().equals("GET")) {
-                //handleGet(r);
+                handleGet(r);
             } else if (r.getRequestMethod().equals("PUT")) {
-            	//handlePut(r);
+            	handlePut(r);
             } else if (r.getRequestMethod().equals("DELETE")) {
             	handleDelete(r);
             }
-            else
+            else {
             	r.sendResponseHeaders(405, -1);
-        } catch (Exception e) {
-        	//Method not allowed
-        	r.sendResponseHeaders(500, -1);
-        	return;
-        }
+		return;
+	    }
     }
     
  public void handlePut(HttpExchange r) throws IOException, JSONException {
@@ -74,7 +70,7 @@ public class Post implements HttpHandler, AutoCloseable
 	 		return;
 	 	}
 	 	
-	 	String title;
+	String title;
         String author;
         String content;
         List<String> tags = new ArrayList<String>();
@@ -98,21 +94,16 @@ public class Post implements HttpHandler, AutoCloseable
         	r.sendResponseHeaders(400, -1);
         	return;
         }
-		// Good so connect to mongo and post
-        	JSONObject post = new JSONObject();
-        	post.put("title", title);
-        	post.put("author", author);
-        	post.put("content", content);
-        	post.put("tags", tags);
+	// Good so connect to mongo and post
+        JSONObject post = new JSONObject();
+        post.put("title", title);
+        post.put("author", author);
+        post.put("content", content);
+        post.put("tags", tags);
         	
-        	Document doc = Document.parse(post.toString());
-        	posts.insertOne(doc);
-        	ObjectId id = doc.getObjectId("_id");
-      	//} catch(Exception e) {
-      	//	e.printStackTrace();
-      	//	r.sendResponseHeaders(500, -1);
-      	//	return;
-      	//}
+        Document doc = Document.parse(post.toString());
+        posts.insertOne(doc);
+        ObjectId id = doc.getObjectId("_id");
         //Went through send response
         String response = "{\n\t\"_id\": \"" + id.toString() + "\"\n}";
         r.sendResponseHeaders(200, response.length());
@@ -120,6 +111,12 @@ public class Post implements HttpHandler, AutoCloseable
         os.write(response.getBytes());
         os.close();
         return;
+	
+	} catch (Exception e) {
+		 //IF IT ever errors out i guess 500 takes priority
+		 r.sendResponseHeaders(500, -1);
+		 return;
+	}
 
 }
 public void handleGet(HttpExchange r) throws IOException, JSONException {
