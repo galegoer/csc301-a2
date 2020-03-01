@@ -32,8 +32,10 @@ public class Post implements HttpHandler, AutoCloseable
     private static MongoDatabase csdb;
     private static MongoCollection<Document> posts;
     
-    public Post(MongoClient db) {
-        database = db;
+    public Post() {}
+    
+    public void setDb(MongoClient db) {
+    	database = db;
         csdb = database.getDatabase("csc301a2");
         posts = csdb.getCollection("posts");
     }
@@ -208,6 +210,8 @@ public void handleGet(HttpExchange r) throws IOException, JSONException {
         os.write(contents.getBytes());		//response.getBytes());
         os.close();
         return;
+        
+       
         
 	 } catch (Exception e) {
 		 //IF IT ever errors out i guess 500 takes priority

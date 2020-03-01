@@ -21,17 +21,21 @@ public class App
     {
 
     	Dagger service = DaggerDaggerComponent.create().buildMongoHttp();
-    		
+    	ServletHandler test = DaggerServletComponent.create().buildServletHandler();
+    	
     	//Create your server context here
     	HttpServer server = service.getServer();
     	MongoClient db = service.getDb();
+    	
+    	test.setDb(db);
     	//db.startSession() --put in post.java
     	//MongoDatabase database = db.getDatabase("csc301a2"); --do in post.java
 
     	MongoDatabase database = db.getDatabase("csc301a2");
     	if(database.getCollection("posts") == null)
     		database.createCollection("posts");
-    	server.createContext("/api/v1/post", new Post(db));
+    	
+    	server.createContext("/api/v1/post", test.getPost());
 	    
     	//Dagger daggerPost = service.createContext("/api/v1/post", )
     	//
