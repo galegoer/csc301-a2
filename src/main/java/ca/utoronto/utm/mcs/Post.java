@@ -14,6 +14,7 @@ import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.result.DeleteResult;
 import com.mongodb.session.ServerSession;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -46,7 +47,7 @@ public class Post implements HttpHandler, AutoCloseable
             } else if (r.getRequestMethod().equals("PUT")) {
             	handlePut(r);
             } else if (r.getRequestMethod().equals("DELETE")) {
-            	//handleDelete(r);
+            	handleDelete(r);
             }
         } catch (Exception e) {
         	//Method not allowed
@@ -144,71 +145,34 @@ public void handleGet(HttpExchange r) throws IOException, JSONException {
 
 }
 
-//public void handleDelete(HttpExchange r) throws IOException, JSONException {
-//    String body = Utils.convert(r.getRequestBody());
-//    JSONObject deserialized;
-// 	try {
-// 		deserialized = new JSONObject(body);
-// 	} catch (Exception e) {
-// 		//Error parsing the JSON Message
-// 		r.sendResponseHeaders(400, -1);
-// 		return;
-// 	}
-// 	
-//    String Id = memory.getValue();
-//
-//    if (deserialized.has("actorId"))
-//        Id = deserialized.getString("actorId");
-//    else {
-//    	r.sendResponseHeaders(400, -1);
-//    	return;
-//    }
-//    
-//    try (ServerSession session = driver.session())
-//    {	
-//    	try (Transaction tx = session.beginTransaction())
-//    	{	
-//    		actor_name = tx.run("MATCH (a:actor) WHERE a.id = $actorId RETURN a.Name", parameters("actorId", Id)); 
-//    		if(actor_name.hasNext()) { //actor_id exists
-//    			//retrieve movies since we know actorID is in the database
-//    			actor_movies = tx.run("MATCH (:actor { id: {x} })--(movie) RETURN movie.id", parameters("x", Id));
-//    			tx.success();  // Mark this write as successful.
-//    		} else {
-//    			r.sendResponseHeaders(404, -1); //SEND 404 NOT FOUND IF NAME ISNT FOUND I.E NO ACTORID IN DB
-//    			return;
-//    		}
-//    	}
-//    }catch(Exception e) {
-//    	r.sendResponseHeaders(500, -1);
-//    	return;
-//    }
-//    
-//    String movies_list = "\n\t\t";
-//    List<Record> results = actor_movies.list();
-//    if (results.isEmpty()) 
-//    	movies_list = "";
-//    else {
-//    	for (int i = 0; i < results.size(); i++) {
-//    		movies_list = movies_list + results.get( i ).get("movie.id");
-//    		if (i != results.size() -1)
-//    			movies_list += ",\n\t\t";
-//    	}
-//    	movies_list += "\n\t";
-//    }
-//    
-//    String response = "{\n\t" + 
-//    		"\"actorId\": " + "\"" + Id + "\",\n\t" +
-//    		"\"name\": " + "\"" + actor_name.single().get( 0 ).asString() + "\",\n\t" + 
-//    		"\"movies\": " + 
-//    			"[" + movies_list + "]"
-//    		+ "\n}";
-//    		
-//    r.sendResponseHeaders(200, response.length());
-//    OutputStream os = r.getResponseBody();
-//    os.write(response.getBytes());
-//    os.close();
-//    return;
-//
-//
-//}
+public void handleDelete(HttpExchange r) throws IOException, JSONException {
+    String body = Utils.convert(r.getRequestBody());
+    JSONObject deserialized;
+ 	try {
+ 		deserialized = new JSONObject(body);
+ 	} catch (Exception e) {
+ 		//Error parsing the JSON Message
+ 		r.sendResponseHeaders(400, -1);
+ 		return;
+ 	}
+ 	
+    String Id = memory.getValue();
+
+    if (deserialized.has("_id"))
+        Id = deserialized.getString("_id");
+    else {
+    	r.sendResponseHeaders(400, -1);
+    	return;
+    }
+    Document doc = Document.parse("{\"_id\": ObjectId(\"" + Id + "\")}");
+    DeleteResult res = posts.deleteOne(doc);
+    if(res.getDeletedCount() == 0) {
+    	r.sendResponseHeaders(404, -1);
+    	return;
+    }
+    r.sendResponseHeaders(200, -1);
+    return;
+
+
+}
 }
