@@ -5,6 +5,7 @@ import java.io.OutputStream;
 import java.util.List;
 
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.json.*;
 
 import com.mongodb.DBObject;
@@ -81,18 +82,19 @@ public class Post implements HttpHandler, AutoCloseable
         	return;
         }
 		// Good so connect to mongo and post
-        try (ClientSession session = database.startSession())
-        {	
-        	session.startTransaction();
+        //try (ClientSession session = database.startSession())
+        //{	
+        	//session.startTransaction();
         	Document doc = Document.parse(deserialized.toString());
         	posts.insertOne(doc);
-      	} catch(Exception e) {
-      		e.printStackTrace();
-      		r.sendResponseHeaders(500, -1);
-      		return;
-      	}
+        	ObjectId id = doc.getObjectId("_id");
+      	//} catch(Exception e) {
+      	//	e.printStackTrace();
+      	//	r.sendResponseHeaders(500, -1);
+      	//	return;
+      	//}
         //Went through send response
-        String response = "blah";
+        String response = "{\n\t\"_id\": \"" + id.toString() + "\"\n}";
         r.sendResponseHeaders(200, response.length());
         OutputStream os = r.getResponseBody();
         os.write(response.getBytes());
