@@ -4,24 +4,33 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
 
+import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.json.*;
 
 import com.mongodb.client.MongoClient;
+import com.mongodb.DBObject;
+import com.mongodb.client.ClientSession;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.session.ServerSession;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
 
-
-public class Post implements HttpHandler, AutoCloseable
+public class Post implements HttpHandler, AutoCloseable 
 {
     private static Memory memory;
-    private static MongoClient db;
+    private static MongoClient database;
+    private static MongoDatabase csdb;
+    private static MongoCollection<Document> posts;
     
-    public Post(Memory mem, MongoClient d) {
+    public Post(Memory mem, MongoClient db) {
         memory = mem;
-        db = d;
+        database = db;
+        csdb = database.getDatabase("csc301a2");
+        posts = csdb.getCollection("posts");
     }
     
     @Override
@@ -57,18 +66,41 @@ public class Post implements HttpHandler, AutoCloseable
 	 		return;
 	 	}
 	 	
-	 	String name = memory.getValue();
-        String Id = memory.getValue();
-        //Can have more names so only check for name and actorId
-        if(deserialized.has("actorId") && deserialized.has("name")) {
-        	name = deserialized.getString("name");
-        	Id = deserialized.getString("actorId");
+	 	String title = memory.getValue();
+        String author = memory.getValue();
+        String content = memory.getValue();
+        String tags = memory.getValue();
+        
+        if (deserialized.has("title") && deserialized.has("author") 
+        		&& deserialized.has("content") && deserialized.has("tags")) {
+            title = deserialized.getString("title");
+            author = deserialized.getString("author");
+            content = deserialized.getString("content");
+            tags = deserialized.getString("tags");
         } else {
-        	//missing actorId and or name
+        	//missing
         	r.sendResponseHeaders(400, -1);
         	return;
         }
 		// Good so connect to mongo and post
+        //try (ClientSession session = database.startSession())
+        //{	
+        	//session.startTransaction();
+        	Document doc = Document.parse(deserialized.toString());
+        	posts.insertOne(doc);
+        	ObjectId id = doc.getObjectId("_id");
+      	//} catch(Exception e) {
+      	//	e.printStackTrace();
+      	//	r.sendResponseHeaders(500, -1);
+      	//	return;
+      	//}
+        //Went through send response
+        String response = "{\n\t\"_id\": \"" + id.toString() + "\"\n}";
+        r.sendResponseHeaders(200, response.length());
+        OutputStream os = r.getResponseBody();
+        os.write(response.getBytes());
+        os.close();
+        return;
 
 }
 
@@ -83,10 +115,19 @@ public void handleGet(HttpExchange r) throws IOException, JSONException {
 	 		return;
 	 	}
 	 	
-        String Id = memory.getValue();
+        String title = memory.getValue();
+        String author = memory.getValue();
+        String content = memory.getValue();
+        String tags = memory.getValue();
         
-        if (deserialized.has("actorId"))
-            Id = deserialized.getString("actorId");
+        if (deserialized.has("title") && deserialized.has("author") 
+        		&& deserialized.has("content") && deserialized.has("tags")) {
+        	
+            title = deserialized.getString("title");
+            author = deserialized.getString("author");
+            content = deserialized.getString("content");
+            tags = deserialized.getString("tags");
+        }
         else {
         	r.sendResponseHeaders(400, -1);
         	return;
