@@ -2,6 +2,7 @@ package ca.utoronto.utm.mcs;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.bson.Document;
@@ -69,14 +70,23 @@ public class Post implements HttpHandler, AutoCloseable
 	 	String title = memory.getValue();
         String author = memory.getValue();
         String content = memory.getValue();
-        String tags = memory.getValue();
+        List<String> tags = new ArrayList<String>();
         
         if (deserialized.has("title") && deserialized.has("author") 
         		&& deserialized.has("content") && deserialized.has("tags")) {
             title = deserialized.getString("title");
             author = deserialized.getString("author");
             content = deserialized.getString("content");
-            tags = deserialized.getString("tags");
+            try {
+            	JSONArray arr = deserialized.getJSONArray("tags");
+            	for(int i = 0; i < arr.length(); i++) {
+                	tags.add(arr.getString(i));
+                }
+            } catch (Exception e) {
+            	r.sendResponseHeaders(400, -1);
+            	return;
+            }
+            
         } else {
         	//missing
         	r.sendResponseHeaders(400, -1);
