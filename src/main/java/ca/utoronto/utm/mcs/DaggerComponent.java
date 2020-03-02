@@ -8,4 +8,6 @@ import javax.inject.Singleton;
 public interface DaggerComponent {
 
 	public Dagger buildMongoHttp();
+
 }
+
