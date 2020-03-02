@@ -95,15 +95,16 @@ public class Post implements HttpHandler, AutoCloseable
                 	tags.add(arr.getString(i));
                 }
             } catch (Exception e) {
+            	//tags is not an array
             	r.sendResponseHeaders(400, -1);
             	return;
             }
         } else {
-        	//missing
+        	//missing something or type is not of string
         	r.sendResponseHeaders(400, -1);
         	return;
         }
-        // Good so connect to mongo and post
+        // Good so post to mongo
         JSONObject post = new JSONObject();
         post.put("title", title);
         post.put("author", author);
@@ -121,7 +122,7 @@ public class Post implements HttpHandler, AutoCloseable
         return;
 	
 	} catch (Exception e) {
-		 //IF IT ever errors out i guess 500 takes priority
+		 //If it ever errors out 500 takes priority
 		r.sendResponseHeaders(500, -1);
 		return;
 	}
@@ -146,7 +147,7 @@ public void handleGet(HttpExchange r) throws IOException, JSONException {
         //id only, or id takes priority --------------------------------------------------------------------------------------------
         if (deserialized.has("_id")) {
             id = deserialized.getString("_id");
-            if (!ObjectId.isValid(id)) {//has both but id is incorrect RETURN 400 according to ilir )
+            if (!ObjectId.isValid(id)) {//has both but id is incorrect RETURN 400 according to ilir
             	r.sendResponseHeaders(400, -1);
             	return;
             }
@@ -201,10 +202,8 @@ public void handleGet(HttpExchange r) throws IOException, JSONException {
         os.close();
         return;
         
-       
-        
 	 } catch (Exception e) {
-		 //IF IT ever errors out i guess 500 takes priority
+		 //If it ever errors 500 takes priority
 		 r.sendResponseHeaders(500, -1);
 		 return;
 	 }
@@ -248,8 +247,6 @@ public String generate_response(Document d) {
 	return contents;
 }
 
-
-
 public void handleDelete(HttpExchange r) throws IOException, JSONException {
 	try {
 		String body = Utils.convert(r.getRequestBody());
@@ -270,13 +267,14 @@ public void handleDelete(HttpExchange r) throws IOException, JSONException {
 			r.sendResponseHeaders(400, -1);
 			return;
 		}
-		if (!ObjectId.isValid(Id)) {//has both but id is incorrect RETURN 400 according to ilir )
+		if (!ObjectId.isValid(Id)) {//has both but id is incorrect RETURN 400 according to ilir
         	r.sendResponseHeaders(400, -1);
         	return;
         }
 		Document doc = Document.parse("{\"_id\": ObjectId(\"" + Id + "\")}");
 		DeleteResult res = posts.deleteOne(doc);
 		if(res.getDeletedCount() == 0) {
+			//nothing deleted therefore 404 error
 			r.sendResponseHeaders(404, -1);
 			return;
 		}
